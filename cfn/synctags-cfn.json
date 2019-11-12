@@ -1,0 +1,158 @@
+{
+   "AWSTemplateFormatVersion": "2010-09-09",
+   "Description":"Creates a lambda function to synchronize specified tags on EC2 child objects including volumes, snapshots, eni and eip resources.",
+   "Parameters": {
+		"ResourceNamePrefix" : {
+			"Description" : "Prefix for all resources.",
+			"Type" : "String",
+			"Default" : "sync-child-resource-tags"
+		},
+		"ResourceSyncTagKeys" : {
+			"Description" : "Array of tag keys to synchronize.",
+			"Type" : "String",
+			"Default" : "[\"Name\", \"BillingCode\", \"Application\", \"Environment\"]"
+		},
+		"NotificationEmail" : {
+			"Description" : "Email address for default notification subscription.",
+			"Type" : "String"
+		}
+   },
+   "Resources": {   
+	"SyncChildResourceTagsEventHandler": {
+		  "Type": "AWS::Lambda::Function",
+		  "Properties": {
+			"FunctionName": { "Fn::Join" : [ "", [ {"Ref" : "ResourceNamePrefix"},"-event-handler" ] ] },
+			"Environment": {
+				"Variables": {
+					"NotifyTopicArn": {"Ref" : "SyncChildResourceTagsTopic"},
+					"SyncTagKeys": {"Ref" : "ResourceSyncTagKeys"}
+				}
+			},
+			"Handler": "synctags.lambda_handler",
+			"Role": {
+			  "Fn::GetAtt": [
+				"SyncChildResourceTagsRole",
+				"Arn"
+			  ]
+			},
+			"Code": "synctags.py",
+			"Runtime": "python3.7",
+			"Timeout": 30
+		  }
+		},
+	"SyncChildResourceTagsEventHandlerPermission": {
+		"Type": "AWS::Lambda::Permission",
+		"Properties": {
+			"FunctionName": {
+				"Fn::GetAtt": [
+					"SyncChildResourceTagsEventHandler",
+					"Arn"
+				]
+			},
+			"Action": "lambda:InvokeFunction",
+			"Principal": "events.amazonaws.com",
+			"SourceArn": {
+				"Fn::GetAtt": [
+					"SyncChildResourceTagsEventRule",
+					"Arn"
+				]
+			}
+		}
+	},
+	"SyncChildResourceTagsEventRule":{
+		"Type" : "AWS::Events::Rule",
+		"Properties": {
+			  "Name" : { "Fn::Join" : [ "", [ {"Ref" : "ResourceNamePrefix"},"-event-rule" ] ] },
+			  "EventPattern" : "{\"source\":[\"aws.tag\"],\"detail-type\":[\"Tag Change on Resource\"],\"detail\":{\"service\":[\"ec2\"],\"resource-type\":[\"instance\"]}}",
+			  "State":"ENABLED",
+			  "Targets" : [{
+				  "Arn": { "Fn::GetAtt": ["SyncChildResourceTagsEventHandler", "Arn"] },
+				  "Id": "1"
+				}]		
+		}	
+	},
+	"SyncChildResourceTagsTopic":{
+		"Type" : "AWS::SNS::Topic",
+		"Properties" : {
+			  "DisplayName" : { "Fn::Join" : [ "", [ {"Ref" : "ResourceNamePrefix"},"-topic" ] ] },
+			  "Subscription" : [ {
+								"Endpoint" : {"Ref" : "NotificationEmail"},
+								"Protocol" : "email"
+								}],
+			  "TopicName" : {"Ref" : "ResourceNamePrefix"}
+			}		
+		},	
+	"SyncChildResourceTagsRole": {
+         "Type": "AWS::IAM::Role",
+         "Properties": {
+			"RoleName" : { "Fn::Join" : [ "", [ {"Ref" : "ResourceNamePrefix"},"-role" ] ] },
+            "AssumeRolePolicyDocument": {
+               "Version" : "2012-10-17",
+               "Statement": [ {
+                  "Effect": "Allow",
+                  "Principal": {
+                     "Service": [ "lambda.amazonaws.com" ]
+                  },
+                  "Action": [ "sts:AssumeRole" ]
+               } ]
+            },
+            "Path": "/service-role/",
+			"Policies": [{
+			  "PolicyName": { "Fn::Join" : [ "", [ {"Ref" : "ResourceNamePrefix"},"-policy" ] ] },
+			  "PolicyDocument": {
+				"Version": "2012-10-17",
+				"Statement": [
+					{
+						"Effect": "Allow",
+						"Action": "logs:CreateLogGroup",
+						"Resource": { "Fn::Sub": "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*" }
+					},
+					{
+						"Effect": "Allow",
+						"Action": [
+							"logs:CreateLogStream",
+							"logs:PutLogEvents"
+						],
+						"Resource": [
+							{ "Fn::Sub": ["arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${ResourceNamePrefix}-event-handler:*", {"ResourceNamePrefix":{"Ref" : "ResourceNamePrefix"}} ]}
+						]
+					},
+					{
+						"Effect": "Allow",
+						"Action": [
+							"ec2:DescribeInstances",
+							"ec2:DescribeVolumes",
+							"ec2:CreateTags",
+							"ec2:DeleteTags",
+							"ec2:DescribeNetworkInterfaces",
+							"ec2:DescribeTags",
+							"ec2:DescribeSnapshots",
+							"ec2:DescribeAddresses"
+						],
+						"Resource": "*"
+					},
+					{
+						"Effect": "Allow",
+						"Action": [
+							"sns:Publish",
+							"sns:Subscribe"
+						],
+						"Resource": {"Ref" : "SyncChildResourceTagsTopic"}
+					},
+					{
+						"Effect": "Allow",
+						"Action": [
+							"iam:ListAccountAliases"
+						],
+						"Resource": "*"
+					}					
+				]
+			  }
+			}]
+         }
+      }
+   }
+}
+
+
+

@@ -1,0 +1,50 @@
+rem =========================================================
+rem 
+rem Creates Lambda function to update child resources from 
+rem parent resource tags based on sync_tag_keys array.
+rem
+rem Supports ec2 volume, snapshot, eni, eip
+rem 
+rem Cloudwatch Event Rule is created to trigger function when
+rem ec2 tag updates occur.
+rem
+rem SNS topic is created to send email notification on tag 
+rem update.
+rem
+rem =========================================================
+
+rem =========================================================
+rem Update the following variables to match your environment
+rem =========================================================
+set aws_profile=MY-AWS-PROFILE
+set aws_accountid=000000000000
+set aws_notifyemail=ME@EMAIL.COM
+set aws_functiontest_instanceid=i-00000000000000000
+set aws_region=us-east-1
+set aws_nameprefix=synctags
+set aws_synctagkeys=[\"Name\", \"BillingCode\", \"Application\", \"Environment\"]
+
+rem =========================================================
+rem Create S3 bucket for deployment package (code)
+rem =========================================================
+aws s3api create-bucket --bucket %aws_cfnbucket% --region %aws_region%
+
+rem =========================================================
+rem Use CFN validate/package/deploy model
+rem =========================================================
+aws cloudformation validate-template --template-body file://synctags-cfn.json
+aws cloudformation package --template-file synctags-cfn.json --s3-bucket %aws_cfnbucket% --output-template-file synctags-cfn-packaged.json
+aws cloudformation deploy --template-file synctags-cfn-packaged.json --stack-name %aws_nameprefix% --parameter-overrides ResourceNamePrefix=%aws_nameprefix% NotificationEmail=%aws_notifyemail% ResourceSyncTagKeys="%aws_synctagkeys%" --capabilities CAPABILITY_NAMED_IAM
+
+rem =========================================================
+rem Call function with test event to est match and no 
+rem match conditions
+rem =========================================================
+
+aws lambda invoke --function-name %aws_nameprefix%-event-handler --payload "{ \"version\": \"0\", \"id\": \"bddcf1d6-0251-35a1-aab0-adc1fb47c11c\", \"detail-type\": \"Tag Change on Resource\", \"source\": \"aws.tag\", \"account\": \"%aws_accountid%\", \"time\": \"2018-09-18T20:41:38Z\", \"region\": \"%aws_region%\", \"resources\": [   \"arn:aws:ec2:%aws_region%:%aws_accountid%:instance/%aws_functiontest_instanceid%\" ], \"detail\": {   \"changed-tag-keys\": [     \"a-new-key\",     \"an-updated-key\",     \"a-deleted-key\"   ],   \"service\": \"ec2\",   \"resource-type\": \"instance\",   \"version\": 3,   \"tags\": {     \"a-new-key\": \"tag-value-on-new-key-just-added\",     \"an-updated-key\": \"tag-value-was-just-changed\",     \"an-unchanged-key\": \"tag-value-still-the-same\"   } }}" out
+aws lambda invoke --function-name %aws_nameprefix%-event-handler --payload "{ \"version\": \"0\", \"id\": \"bddcf1d6-0251-35a1-aab0-adc1fb47c11c\", \"detail-type\": \"Tag Change on Resource\", \"source\": \"aws.tag\", \"account\": \"%aws_accountid%\", \"time\": \"2018-09-18T20:41:38Z\", \"region\": \"%aws_region%\", \"resources\": [   \"arn:aws:ec2:%aws_region%:%aws_accountid%:instance/%aws_functiontest_instanceid%\" ], \"detail\": {   \"changed-tag-keys\": [     \"BillingCode\",     \"an-updated-key\",     \"a-deleted-key\"   ],   \"service\": \"ec2\",   \"resource-type\": \"instance\",   \"version\": 3,   \"tags\": {     \"a-new-key\": \"tag-value-on-new-key-just-added\",     \"an-updated-key\": \"tag-value-was-just-changed\",     \"an-unchanged-key\": \"tag-value-still-the-same\"   } }}" out
+
+rem =========================================================
+rem Remove stack and resources
+rem =========================================================
+aws cloudformation delete-stack --stack-name %aws_nameprefix%
