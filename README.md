@@ -32,7 +32,7 @@ cfn - AWS CloudFormation template, Lambda function code and CloudFormation CLI c
 
 In each method directory open the .txt file to review the commands to create, test and delete the solution resources.
 
-.\cli\synctags-cli.txt<br/>  
+.\cli\synctags-cli.txt  
 .\cfn\synctags-cfn-cli.txt
 
 Review the comments and commands starting with the environment variable set commands. These variables define the configurable parameters of the solution.
@@ -63,7 +63,7 @@ Once you ahve set your parameter values based on your environment you can use th
 The commands and scripts in this solution assume you have the AWS CLI 1.x installed (https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html) and configured using named profiles (https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html).
 
 #### References
-AWS CloudFormation: <https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/Welcome.html><br/>  
-AWS Command Line Interface: <https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html><br/>  
+AWS CloudFormation: <https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/Welcome.html>  
+AWS Command Line Interface: <https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html>  
 AWS SDK for Python (BOTO 3): <https://boto3.amazonaws.com/v1/documentation/api/latest/index.html><br/>
 
