@@ -44,7 +44,8 @@ set aws_notifyemail=ME@EMAIL.COM
 set aws_functiontest_instanceid=i-00000000000000000
 set aws_default_region=us-east-1
 set aws_nameprefix=synctags
-set aws_synctagkeys=[\"Name\", \"BillingCode\", \"Application\", \"Environment\"]
+set aws_synctagkeys=[\\"Name\\", \\"BillingCode\\", \\"Application\\", \\"Environment\\"]
+set aws_cfnbucket=%aws_nameprefix%-cfn-bucket
 ```
 
 | Variable  | Description  | Example |
