@@ -40,6 +40,8 @@ rem =========================================================
 aws sns create-topic --name %aws_nameprefix%-topic --out text --query "TopicArn" 
 aws sns subscribe --topic-arn arn:aws:sns:%aws_default_region%:%aws_accountid%:%aws_nameprefix%-topic --protocol email --notification-endpoint %aws_notifyemail%
 
+rem Confirm topic subscription email in order to receive notifications on tag updates
+
 rem =========================================================
 rem Create function code file
 rem =========================================================
@@ -51,13 +53,12 @@ echo def lambda_handler(event, context):  >> %aws_nameprefix%.py
 echo: >> %aws_nameprefix%.py 
 echo    accountname = boto3.client('iam').list_account_aliases()['AccountAliases'][0] >> %aws_nameprefix%.py
 echo    topicarn = os.environ["NotifyTopicArn"]  >> %aws_nameprefix%.py
+echo    sync_tag_keys = os.environ["SyncTagKeys"]  >> %aws_nameprefix%.py
 echo    instancename = ''  >> %aws_nameprefix%.py
 echo: >> %aws_nameprefix%.py   
 echo    ec2_resource = boto3.resource('ec2')  >> %aws_nameprefix%.py
 echo    ec2_client = boto3.client('ec2') >> %aws_nameprefix%.py
 echo    sns_client = boto3.client('sns')  >> %aws_nameprefix%.py
-echo: >> %aws_nameprefix%.py 
-echo    sync_tag_keys = os.environ["SyncTagKeys"]  >> %aws_nameprefix%.py
 echo: >> %aws_nameprefix%.py
 echo    try:  >> %aws_nameprefix%.py
 echo: >> %aws_nameprefix%.py 
@@ -132,10 +133,12 @@ aws lambda add-permission --function-name %aws_nameprefix%-event-handler --actio
 
 rem =========================================================
 rem Call function with test event to est match and no 
-rem match conditions
+rem match conditions. Review Cloutwatch LogGroup\LogStream
 rem =========================================================
-
+rem NoMatch - should receive "info: no matching changed tags" in log stream
 aws lambda invoke --function-name %aws_nameprefix%-event-handler --payload "{ \"version\": \"0\", \"id\": \"bddcf1d6-0251-35a1-aab0-adc1fb47c11c\", \"detail-type\": \"Tag Change on Resource\", \"source\": \"aws.tag\", \"account\": \"%aws_accountid%\", \"time\": \"2018-09-18T20:41:38Z\", \"region\": \"%aws_default_region%\", \"resources\": [   \"arn:aws:ec2:%aws_default_region%:%aws_accountid%:instance/%aws_functiontest_instanceid%\" ], \"detail\": {   \"changed-tag-keys\": [     \"a-new-key\",     \"an-updated-key\",     \"a-deleted-key\"   ],   \"service\": \"ec2\",   \"resource-type\": \"instance\",   \"version\": 3,   \"tags\": {     \"a-new-key\": \"tag-value-on-new-key-just-added\",     \"an-updated-key\": \"tag-value-was-just-changed\",     \"an-unchanged-key\": \"tag-value-still-the-same\"   } }}" out
+
+rem Match - will receive notification email and "success: updated child resource tags for instance" in log stream
 aws lambda invoke --function-name %aws_nameprefix%-event-handler --payload "{ \"version\": \"0\", \"id\": \"bddcf1d6-0251-35a1-aab0-adc1fb47c11c\", \"detail-type\": \"Tag Change on Resource\", \"source\": \"aws.tag\", \"account\": \"%aws_accountid%\", \"time\": \"2018-09-18T20:41:38Z\", \"region\": \"%aws_default_region%\", \"resources\": [   \"arn:aws:ec2:%aws_default_region%:%aws_accountid%:instance/%aws_functiontest_instanceid%\" ], \"detail\": {   \"changed-tag-keys\": [     \"BillingCode\",     \"an-updated-key\",     \"a-deleted-key\"   ],   \"service\": \"ec2\",   \"resource-type\": \"instance\",   \"version\": 3,   \"tags\": {     \"a-new-key\": \"tag-value-on-new-key-just-added\",     \"an-updated-key\": \"tag-value-was-just-changed\",     \"an-unchanged-key\": \"tag-value-still-the-same\"   } }}" out
 
 rem =========================================================
@@ -147,7 +150,8 @@ aws events put-rule --name %aws_nameprefix%-event-rule --event-pattern "{\"sourc
 aws events put-targets --rule %aws_nameprefix%-event-rule --targets "Id"="1","Arn"="arn:aws:lambda:%aws_default_region%:%aws_accountid%:function:%aws_nameprefix%-event-handler"
 
 rem =========================================================
-rem Create test events for console testing
+rem Create test events for console testing of Lambda function
+rem https://aws.amazon.com/blogs/compute/improved-testing-on-the-aws-lambda-console/
 rem =========================================================
 
 rem MatchTestEvent

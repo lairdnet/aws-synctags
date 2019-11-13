@@ -3,3 +3,5 @@ out
 *-packaged.json
 *.tmp
 notes
+cli/synctags.py
+cli/synctags.zip

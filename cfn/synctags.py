@@ -5,13 +5,12 @@ def lambda_handler(event, context):
  
    accountname = boto3.client('iam').list_account_aliases()['AccountAliases'][0]
    topicarn = os.environ["NotifyTopicArn"]
+   sync_tag_keys = os.environ["SyncTagKeys"] 
    instancename = '' 
    
    ec2_resource = boto3.resource('ec2') 
    ec2_client = boto3.client('ec2')
    sns_client = boto3.client('sns') 
- 
-   sync_tag_keys = os.environ["SyncTagKeys"] 
  
    try: 
  

@@ -5,7 +5,7 @@
 		"ResourceNamePrefix" : {
 			"Description" : "Prefix for all resources.",
 			"Type" : "String",
-			"Default" : "sync-child-resource-tags"
+			"Default" : "synctags"
 		},
 		"ResourceSyncTagKeys" : {
 			"Description" : "Array of tag keys to synchronize.",
@@ -79,7 +79,7 @@
 								"Endpoint" : {"Ref" : "NotificationEmail"},
 								"Protocol" : "email"
 								}],
-			  "TopicName" : {"Ref" : "ResourceNamePrefix"}
+			  "TopicName" : { "Fn::Join" : [ "", [ {"Ref" : "ResourceNamePrefix"},"-topic" ] ] }
 			}		
 		},	
 	"SyncChildResourceTagsRole": {

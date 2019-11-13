@@ -23,6 +23,7 @@ set aws_functiontest_instanceid=i-00000000000000000
 set aws_default_region=us-east-1
 set aws_nameprefix=synctags
 set aws_synctagkeys=[\"Name\", \"BillingCode\", \"Application\", \"Environment\"]
+set aws_cfnbucket=%aws_nameprefix%-cfn-bucket
 
 rem =========================================================
 rem Create S3 bucket for deployment package (code)
@@ -33,16 +34,65 @@ rem =========================================================
 rem Use CFN validate/package/deploy model
 rem =========================================================
 aws cloudformation validate-template --template-body file://synctags-cfn.json
-aws cloudformation package --template-file synctags-cfn.json --s3-bucket %aws_cfnbucket% --output-template-file synctags-cfn-packaged.json
-aws cloudformation deploy --template-file synctags-cfn-packaged.json --stack-name %aws_nameprefix% --parameter-overrides ResourceNamePrefix=%aws_nameprefix% NotificationEmail=%aws_notifyemail% ResourceSyncTagKeys="%aws_synctagkeys%" --capabilities CAPABILITY_NAMED_IAM
+aws cloudformation package --template-file synctags-cfn.json --s3-bucket %aws_cfnbucket% --output-template-file synctags-cfn-packaged.yml
+aws cloudformation deploy --template-file synctags-cfn-packaged.yml --stack-name %aws_nameprefix% --parameter-overrides ResourceNamePrefix=%aws_nameprefix% NotificationEmail=%aws_notifyemail% ResourceSyncTagKeys="%aws_synctagkeys%" --capabilities CAPABILITY_NAMED_IAM
+
+rem Confirm topic subscription email in order to receive notifications on tag updates
 
 rem =========================================================
-rem Call function with test event to est match and no 
-rem match conditions
+rem Call function with test event to test match and no 
+rem match conditions. Review Cloutwatch LogGroup\LogStream
 rem =========================================================
-
+rem NoMatch - should receive "info: no matching changed tags" in log stream
 aws lambda invoke --function-name %aws_nameprefix%-event-handler --payload "{ \"version\": \"0\", \"id\": \"bddcf1d6-0251-35a1-aab0-adc1fb47c11c\", \"detail-type\": \"Tag Change on Resource\", \"source\": \"aws.tag\", \"account\": \"%aws_accountid%\", \"time\": \"2018-09-18T20:41:38Z\", \"region\": \"%aws_default_region%\", \"resources\": [   \"arn:aws:ec2:%aws_default_region%:%aws_accountid%:instance/%aws_functiontest_instanceid%\" ], \"detail\": {   \"changed-tag-keys\": [     \"a-new-key\",     \"an-updated-key\",     \"a-deleted-key\"   ],   \"service\": \"ec2\",   \"resource-type\": \"instance\",   \"version\": 3,   \"tags\": {     \"a-new-key\": \"tag-value-on-new-key-just-added\",     \"an-updated-key\": \"tag-value-was-just-changed\",     \"an-unchanged-key\": \"tag-value-still-the-same\"   } }}" out
+
+rem Match - will receive notification email and "success: updated child resource tags for instance" in log stream
 aws lambda invoke --function-name %aws_nameprefix%-event-handler --payload "{ \"version\": \"0\", \"id\": \"bddcf1d6-0251-35a1-aab0-adc1fb47c11c\", \"detail-type\": \"Tag Change on Resource\", \"source\": \"aws.tag\", \"account\": \"%aws_accountid%\", \"time\": \"2018-09-18T20:41:38Z\", \"region\": \"%aws_default_region%\", \"resources\": [   \"arn:aws:ec2:%aws_default_region%:%aws_accountid%:instance/%aws_functiontest_instanceid%\" ], \"detail\": {   \"changed-tag-keys\": [     \"BillingCode\",     \"an-updated-key\",     \"a-deleted-key\"   ],   \"service\": \"ec2\",   \"resource-type\": \"instance\",   \"version\": 3,   \"tags\": {     \"a-new-key\": \"tag-value-on-new-key-just-added\",     \"an-updated-key\": \"tag-value-was-just-changed\",     \"an-unchanged-key\": \"tag-value-still-the-same\"   } }}" out
+
+rem =========================================================
+rem Create test events for console testing of Lambda function
+rem https://aws.amazon.com/blogs/compute/improved-testing-on-the-aws-lambda-console/
+rem =========================================================
+
+rem MatchTestEvent
+echo { > matchtestevent.tmp
+echo "version": "0", >> matchtestevent.tmp
+echo "id": "bddcf1d6-0251-35a1-aab0-adc1fb47c11c", >> matchtestevent.tmp
+echo "detail-type": "Tag Change on Resource", >> matchtestevent.tmp
+echo "source": "aws.tag", >> matchtestevent.tmp
+echo "account": "%aws_accountid%", >> matchtestevent.tmp
+echo "time": "2018-09-18T20:41:38Z", >> matchtestevent.tmp
+echo "region": "%aws_default_region%", >> matchtestevent.tmp
+echo "resources": ["arn:aws:ec2:%aws_default_region%:%aws_accountid%:instance/%aws_functiontest_instanceid%" ], >> matchtestevent.tmp
+echo "detail": { >> matchtestevent.tmp
+echo "changed-tag-keys": [ "BillingCode", "an-updated-key", "a-deleted-key" ], >> matchtestevent.tmp
+echo "service": "ec2", >> matchtestevent.tmp
+echo "resource-type": "instance", >> matchtestevent.tmp
+echo "version": 3, >> matchtestevent.tmp
+echo "tags": { "a-new-key": "tag-value-on-new-key-just-added", "an-updated-key": "tag-value-was-just-changed", "an-unchanged-key": "tag-value-still-the-same" } >> matchtestevent.tmp
+echo } >> matchtestevent.tmp
+echo } >> matchtestevent.tmp
+notepad matchtestevent.tmp
+
+rem NoMatchTestEvent
+echo { > nomatchtestevent.tmp
+echo "version": "0", >> nomatchtestevent.tmp
+echo "id": "bddcf1d6-0251-35a1-aab0-adc1fb47c11c", >> nomatchtestevent.tmp
+echo "detail-type": "Tag Change on Resource", >> nomatchtestevent.tmp
+echo "source": "aws.tag", >> nomatchtestevent.tmp
+echo "account": "%aws_accountid%", >> nomatchtestevent.tmp
+echo "time": "2018-09-18T20:41:38Z", >> nomatchtestevent.tmp
+echo "region": "%aws_default_region%", >> nomatchtestevent.tmp
+echo "resources": [   "arn:aws:ec2:%aws_default_region%:%aws_accountid%:instance/%aws_functiontest_instanceid%" ], >> nomatchtestevent.tmp
+echo "detail": { >> nomatchtestevent.tmp
+echo "changed-tag-keys": ["a-new-key", "an-updated-key", "a-deleted-key"   ], >> nomatchtestevent.tmp
+echo "service": "ec2", >> nomatchtestevent.tmp
+echo "resource-type": "instance", >> nomatchtestevent.tmp
+echo "version": 3, >> nomatchtestevent.tmp
+echo "tags": { "a-new-key": "tag-value-on-new-key-just-added", "an-updated-key": "tag-value-was-just-changed", "an-unchanged-key": "tag-value-still-the-same" } >> nomatchtestevent.tmp
+echo } >> nomatchtestevent.tmp
+echo } >> nomatchtestevent.tmp
+notepad nomatchtestevent.tmp
 
 rem =========================================================
 rem Remove stack and resources
