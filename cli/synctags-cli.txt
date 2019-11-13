@@ -20,7 +20,7 @@ set aws_profile=MY-AWS-PROFILE
 set aws_accountid=000000000000
 set aws_notifyemail=ME@EMAIL.COM
 set aws_functiontest_instanceid=i-00000000000000000
-set aws_region=us-east-1
+set aws_default_region=us-east-1
 set aws_nameprefix=synctags
 set aws_synctagkeys=[\"Name\", \"BillingCode\", \"Application\", \"Environment\"]
 
@@ -30,7 +30,7 @@ rem Create function iam role and policy
 rem =========================================================
 
 aws iam create-role --role-name %aws_nameprefix%-role --path "/service-role/" --assume-role-policy-document "{\"Version\": \"2012-10-17\",\"Statement\": [{\"Effect\": \"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
-aws iam put-role-policy --role-name %aws_nameprefix%-role --policy-name %aws_nameprefix%-policy --policy-document "{\"Version\": \"2012-10-17\",\"Statement\": [{\"Effect\": \"Allow\",\"Action\": \"logs:CreateLogGroup\",\"Resource\": \"arn:aws:logs:%aws_region%:%aws_accountid%:*\"},{\"Effect\": \"Allow\",\"Action\": [\"logs:CreateLogStream\",\"logs:PutLogEvents\"],\"Resource\": [\"arn:aws:logs:%aws_region%:%aws_accountid%:log-group:/aws/lambda/%aws_nameprefix%-event-handler:*\"]},{\"Effect\": \"Allow\",\"Action\":[\"ec2:DescribeInstances\",\"ec2:DescribeVolumes\",\"ec2:DescribeSnapshots\",\"ec2:DescribeAddresses\",\"ec2:CreateTags\",\"ec2:DeleteTags\",\"ec2:DescribeNetworkInterfaces\",\"ec2:DescribeTags\"],\"Resource\": \"*\"},{\"Effect\": \"Allow\",\"Action\": [\"sns:Publish\",\"sns:Subscribe\"],\"Resource\": \"arn:aws:sns:%aws_region%:%aws_accountid%:%aws_nameprefix%-topic\"},{\"Effect\": \"Allow\",\"Action\": [\"iam:ListAccountAliases\"],\"Resource\": \"*\"}]}"
+aws iam put-role-policy --role-name %aws_nameprefix%-role --policy-name %aws_nameprefix%-policy --policy-document "{\"Version\": \"2012-10-17\",\"Statement\": [{\"Effect\": \"Allow\",\"Action\": \"logs:CreateLogGroup\",\"Resource\": \"arn:aws:logs:%aws_default_region%:%aws_accountid%:*\"},{\"Effect\": \"Allow\",\"Action\": [\"logs:CreateLogStream\",\"logs:PutLogEvents\"],\"Resource\": [\"arn:aws:logs:%aws_default_region%:%aws_accountid%:log-group:/aws/lambda/%aws_nameprefix%-event-handler:*\"]},{\"Effect\": \"Allow\",\"Action\":[\"ec2:DescribeInstances\",\"ec2:DescribeVolumes\",\"ec2:DescribeSnapshots\",\"ec2:DescribeAddresses\",\"ec2:CreateTags\",\"ec2:DeleteTags\",\"ec2:DescribeNetworkInterfaces\",\"ec2:DescribeTags\"],\"Resource\": \"*\"},{\"Effect\": \"Allow\",\"Action\": [\"sns:Publish\",\"sns:Subscribe\"],\"Resource\": \"arn:aws:sns:%aws_default_region%:%aws_accountid%:%aws_nameprefix%-topic\"},{\"Effect\": \"Allow\",\"Action\": [\"iam:ListAccountAliases\"],\"Resource\": \"*\"}]}"
 
 rem =========================================================
 rem Create notification topic and subscription for email
@@ -38,7 +38,7 @@ rem notifications
 rem =========================================================
 
 aws sns create-topic --name %aws_nameprefix%-topic --out text --query "TopicArn" 
-aws sns subscribe --topic-arn arn:aws:sns:%aws_region%:%aws_accountid%:%aws_nameprefix%-topic --protocol email --notification-endpoint %aws_notifyemail%
+aws sns subscribe --topic-arn arn:aws:sns:%aws_default_region%:%aws_accountid%:%aws_nameprefix%-topic --protocol email --notification-endpoint %aws_notifyemail%
 
 rem =========================================================
 rem Create function code file
@@ -127,16 +127,16 @@ rem =========================================================
 rem Create function and assign invoke to events rule
 rem =========================================================
 
-aws lambda create-function --function-name %aws_nameprefix%-event-handler --zip-file fileb://%aws_nameprefix%.zip --handler %aws_nameprefix%.lambda_handler --runtime python3.7 --role arn:aws:iam::%aws_accountid%:role/service-role/%aws_nameprefix%-role --environment Variables="{NotifyTopicArn=arn:aws:sns:%aws_region%:%aws_accountid%:%aws_nameprefix%-topic,SyncTagKeys='%aws_synctagkeys%'}" --timeout 30
-aws lambda add-permission --function-name %aws_nameprefix%-event-handler --action lambda:InvokeFunction --statement-id events --principal events.amazonaws.com --source-arn  arn:aws:events:%aws_region%:%aws_accountid%:rule/%aws_nameprefix%-event-rule
+aws lambda create-function --function-name %aws_nameprefix%-event-handler --zip-file fileb://%aws_nameprefix%.zip --handler %aws_nameprefix%.lambda_handler --runtime python3.7 --role arn:aws:iam::%aws_accountid%:role/service-role/%aws_nameprefix%-role --environment Variables="{NotifyTopicArn=arn:aws:sns:%aws_default_region%:%aws_accountid%:%aws_nameprefix%-topic,SyncTagKeys='%aws_synctagkeys%'}" --timeout 30
+aws lambda add-permission --function-name %aws_nameprefix%-event-handler --action lambda:InvokeFunction --statement-id events --principal events.amazonaws.com --source-arn  arn:aws:events:%aws_default_region%:%aws_accountid%:rule/%aws_nameprefix%-event-rule
 
 rem =========================================================
 rem Call function with test event to est match and no 
 rem match conditions
 rem =========================================================
 
-aws lambda invoke --function-name %aws_nameprefix%-event-handler --payload "{ \"version\": \"0\", \"id\": \"bddcf1d6-0251-35a1-aab0-adc1fb47c11c\", \"detail-type\": \"Tag Change on Resource\", \"source\": \"aws.tag\", \"account\": \"%aws_accountid%\", \"time\": \"2018-09-18T20:41:38Z\", \"region\": \"%aws_region%\", \"resources\": [   \"arn:aws:ec2:%aws_region%:%aws_accountid%:instance/%aws_functiontest_instanceid%\" ], \"detail\": {   \"changed-tag-keys\": [     \"a-new-key\",     \"an-updated-key\",     \"a-deleted-key\"   ],   \"service\": \"ec2\",   \"resource-type\": \"instance\",   \"version\": 3,   \"tags\": {     \"a-new-key\": \"tag-value-on-new-key-just-added\",     \"an-updated-key\": \"tag-value-was-just-changed\",     \"an-unchanged-key\": \"tag-value-still-the-same\"   } }}" out
-aws lambda invoke --function-name %aws_nameprefix%-event-handler --payload "{ \"version\": \"0\", \"id\": \"bddcf1d6-0251-35a1-aab0-adc1fb47c11c\", \"detail-type\": \"Tag Change on Resource\", \"source\": \"aws.tag\", \"account\": \"%aws_accountid%\", \"time\": \"2018-09-18T20:41:38Z\", \"region\": \"%aws_region%\", \"resources\": [   \"arn:aws:ec2:%aws_region%:%aws_accountid%:instance/%aws_functiontest_instanceid%\" ], \"detail\": {   \"changed-tag-keys\": [     \"BillingCode\",     \"an-updated-key\",     \"a-deleted-key\"   ],   \"service\": \"ec2\",   \"resource-type\": \"instance\",   \"version\": 3,   \"tags\": {     \"a-new-key\": \"tag-value-on-new-key-just-added\",     \"an-updated-key\": \"tag-value-was-just-changed\",     \"an-unchanged-key\": \"tag-value-still-the-same\"   } }}" out
+aws lambda invoke --function-name %aws_nameprefix%-event-handler --payload "{ \"version\": \"0\", \"id\": \"bddcf1d6-0251-35a1-aab0-adc1fb47c11c\", \"detail-type\": \"Tag Change on Resource\", \"source\": \"aws.tag\", \"account\": \"%aws_accountid%\", \"time\": \"2018-09-18T20:41:38Z\", \"region\": \"%aws_default_region%\", \"resources\": [   \"arn:aws:ec2:%aws_default_region%:%aws_accountid%:instance/%aws_functiontest_instanceid%\" ], \"detail\": {   \"changed-tag-keys\": [     \"a-new-key\",     \"an-updated-key\",     \"a-deleted-key\"   ],   \"service\": \"ec2\",   \"resource-type\": \"instance\",   \"version\": 3,   \"tags\": {     \"a-new-key\": \"tag-value-on-new-key-just-added\",     \"an-updated-key\": \"tag-value-was-just-changed\",     \"an-unchanged-key\": \"tag-value-still-the-same\"   } }}" out
+aws lambda invoke --function-name %aws_nameprefix%-event-handler --payload "{ \"version\": \"0\", \"id\": \"bddcf1d6-0251-35a1-aab0-adc1fb47c11c\", \"detail-type\": \"Tag Change on Resource\", \"source\": \"aws.tag\", \"account\": \"%aws_accountid%\", \"time\": \"2018-09-18T20:41:38Z\", \"region\": \"%aws_default_region%\", \"resources\": [   \"arn:aws:ec2:%aws_default_region%:%aws_accountid%:instance/%aws_functiontest_instanceid%\" ], \"detail\": {   \"changed-tag-keys\": [     \"BillingCode\",     \"an-updated-key\",     \"a-deleted-key\"   ],   \"service\": \"ec2\",   \"resource-type\": \"instance\",   \"version\": 3,   \"tags\": {     \"a-new-key\": \"tag-value-on-new-key-just-added\",     \"an-updated-key\": \"tag-value-was-just-changed\",     \"an-unchanged-key\": \"tag-value-still-the-same\"   } }}" out
 
 rem =========================================================
 rem Create cloudwatch event rule to trigger function
@@ -144,7 +144,7 @@ rem on ec2 tag updates
 rem =========================================================
 
 aws events put-rule --name %aws_nameprefix%-event-rule --event-pattern "{\"source\":[\"aws.tag\"],\"detail-type\":[\"Tag Change on Resource\"],\"detail\":{\"service\":[\"ec2\"],\"resource-type\":[\"instance\"]}}"
-aws events put-targets --rule %aws_nameprefix%-event-rule --targets "Id"="1","Arn"="arn:aws:lambda:%aws_region%:%aws_accountid%:function:%aws_nameprefix%-event-handler"
+aws events put-targets --rule %aws_nameprefix%-event-rule --targets "Id"="1","Arn"="arn:aws:lambda:%aws_default_region%:%aws_accountid%:function:%aws_nameprefix%-event-handler"
 
 rem =========================================================
 rem Create test events for console testing
@@ -158,8 +158,8 @@ echo "detail-type": "Tag Change on Resource", >> matchtestevent.tmp
 echo "source": "aws.tag", >> matchtestevent.tmp
 echo "account": "%aws_accountid%", >> matchtestevent.tmp
 echo "time": "2018-09-18T20:41:38Z", >> matchtestevent.tmp
-echo "region": "%aws_region%", >> matchtestevent.tmp
-echo "resources": ["arn:aws:ec2:%aws_region%:%aws_accountid%:instance/%aws_functiontest_instanceid%" ], >> matchtestevent.tmp
+echo "region": "%aws_default_region%", >> matchtestevent.tmp
+echo "resources": ["arn:aws:ec2:%aws_default_region%:%aws_accountid%:instance/%aws_functiontest_instanceid%" ], >> matchtestevent.tmp
 echo "detail": { >> matchtestevent.tmp
 echo "changed-tag-keys": [ "BillingCode", "an-updated-key", "a-deleted-key" ], >> matchtestevent.tmp
 echo "service": "ec2", >> matchtestevent.tmp
@@ -178,8 +178,8 @@ echo "detail-type": "Tag Change on Resource", >> nomatchtestevent.tmp
 echo "source": "aws.tag", >> nomatchtestevent.tmp
 echo "account": "%aws_accountid%", >> nomatchtestevent.tmp
 echo "time": "2018-09-18T20:41:38Z", >> nomatchtestevent.tmp
-echo "region": "%aws_region%", >> nomatchtestevent.tmp
-echo "resources": [   "arn:aws:ec2:%aws_region%:%aws_accountid%:instance/%aws_functiontest_instanceid%" ], >> nomatchtestevent.tmp
+echo "region": "%aws_default_region%", >> nomatchtestevent.tmp
+echo "resources": [   "arn:aws:ec2:%aws_default_region%:%aws_accountid%:instance/%aws_functiontest_instanceid%" ], >> nomatchtestevent.tmp
 echo "detail": { >> nomatchtestevent.tmp
 echo "changed-tag-keys": ["a-new-key", "an-updated-key", "a-deleted-key"   ], >> nomatchtestevent.tmp
 echo "service": "ec2", >> nomatchtestevent.tmp
@@ -198,10 +198,10 @@ aws events remove-targets --rule %aws_nameprefix%-event-rule --ids 1
 aws events delete-rule --name %aws_nameprefix%-event-rule
 aws lambda delete-function --function-name %aws_nameprefix%-event-handler
 aws logs delete-log-group --log-group-name /aws/lambda/%aws_nameprefix%-event-handler
-aws sns list-subscriptions-by-topic --topic-arn arn:aws:sns:%aws_region%:%aws_accountid%:%aws_nameprefix%-topic --no-paginate --output text --query "Subscriptions[]["SubscriptionArn"]" > snstopicsubarn.tmp
+aws sns list-subscriptions-by-topic --topic-arn arn:aws:sns:%aws_default_region%:%aws_accountid%:%aws_nameprefix%-topic --no-paginate --output text --query "Subscriptions[]["SubscriptionArn"]" > snstopicsubarn.tmp
 set /p snstopicsubarn=<snstopicsubarn.tmp
 aws sns unsubscribe --subscription-arn %snstopicsubarn%
-aws sns delete-topic --topic-arn arn:aws:sns:%aws_region%:%aws_accountid%:%aws_nameprefix%-topic
+aws sns delete-topic --topic-arn arn:aws:sns:%aws_default_region%:%aws_accountid%:%aws_nameprefix%-topic
 aws iam delete-role-policy --role-name %aws_nameprefix%-role --policy-name %aws_nameprefix%-policy
 aws iam delete-role --role-name %aws_nameprefix%-role
 

@@ -20,14 +20,14 @@ set aws_profile=MY-AWS-PROFILE
 set aws_accountid=000000000000
 set aws_notifyemail=ME@EMAIL.COM
 set aws_functiontest_instanceid=i-00000000000000000
-set aws_region=us-east-1
+set aws_default_region=us-east-1
 set aws_nameprefix=synctags
 set aws_synctagkeys=[\"Name\", \"BillingCode\", \"Application\", \"Environment\"]
 
 rem =========================================================
 rem Create S3 bucket for deployment package (code)
 rem =========================================================
-aws s3api create-bucket --bucket %aws_cfnbucket% --region %aws_region%
+aws s3api create-bucket --bucket %aws_cfnbucket% --region %aws_default_region%
 
 rem =========================================================
 rem Use CFN validate/package/deploy model
@@ -41,8 +41,8 @@ rem Call function with test event to est match and no
 rem match conditions
 rem =========================================================
 
-aws lambda invoke --function-name %aws_nameprefix%-event-handler --payload "{ \"version\": \"0\", \"id\": \"bddcf1d6-0251-35a1-aab0-adc1fb47c11c\", \"detail-type\": \"Tag Change on Resource\", \"source\": \"aws.tag\", \"account\": \"%aws_accountid%\", \"time\": \"2018-09-18T20:41:38Z\", \"region\": \"%aws_region%\", \"resources\": [   \"arn:aws:ec2:%aws_region%:%aws_accountid%:instance/%aws_functiontest_instanceid%\" ], \"detail\": {   \"changed-tag-keys\": [     \"a-new-key\",     \"an-updated-key\",     \"a-deleted-key\"   ],   \"service\": \"ec2\",   \"resource-type\": \"instance\",   \"version\": 3,   \"tags\": {     \"a-new-key\": \"tag-value-on-new-key-just-added\",     \"an-updated-key\": \"tag-value-was-just-changed\",     \"an-unchanged-key\": \"tag-value-still-the-same\"   } }}" out
-aws lambda invoke --function-name %aws_nameprefix%-event-handler --payload "{ \"version\": \"0\", \"id\": \"bddcf1d6-0251-35a1-aab0-adc1fb47c11c\", \"detail-type\": \"Tag Change on Resource\", \"source\": \"aws.tag\", \"account\": \"%aws_accountid%\", \"time\": \"2018-09-18T20:41:38Z\", \"region\": \"%aws_region%\", \"resources\": [   \"arn:aws:ec2:%aws_region%:%aws_accountid%:instance/%aws_functiontest_instanceid%\" ], \"detail\": {   \"changed-tag-keys\": [     \"BillingCode\",     \"an-updated-key\",     \"a-deleted-key\"   ],   \"service\": \"ec2\",   \"resource-type\": \"instance\",   \"version\": 3,   \"tags\": {     \"a-new-key\": \"tag-value-on-new-key-just-added\",     \"an-updated-key\": \"tag-value-was-just-changed\",     \"an-unchanged-key\": \"tag-value-still-the-same\"   } }}" out
+aws lambda invoke --function-name %aws_nameprefix%-event-handler --payload "{ \"version\": \"0\", \"id\": \"bddcf1d6-0251-35a1-aab0-adc1fb47c11c\", \"detail-type\": \"Tag Change on Resource\", \"source\": \"aws.tag\", \"account\": \"%aws_accountid%\", \"time\": \"2018-09-18T20:41:38Z\", \"region\": \"%aws_default_region%\", \"resources\": [   \"arn:aws:ec2:%aws_default_region%:%aws_accountid%:instance/%aws_functiontest_instanceid%\" ], \"detail\": {   \"changed-tag-keys\": [     \"a-new-key\",     \"an-updated-key\",     \"a-deleted-key\"   ],   \"service\": \"ec2\",   \"resource-type\": \"instance\",   \"version\": 3,   \"tags\": {     \"a-new-key\": \"tag-value-on-new-key-just-added\",     \"an-updated-key\": \"tag-value-was-just-changed\",     \"an-unchanged-key\": \"tag-value-still-the-same\"   } }}" out
+aws lambda invoke --function-name %aws_nameprefix%-event-handler --payload "{ \"version\": \"0\", \"id\": \"bddcf1d6-0251-35a1-aab0-adc1fb47c11c\", \"detail-type\": \"Tag Change on Resource\", \"source\": \"aws.tag\", \"account\": \"%aws_accountid%\", \"time\": \"2018-09-18T20:41:38Z\", \"region\": \"%aws_default_region%\", \"resources\": [   \"arn:aws:ec2:%aws_default_region%:%aws_accountid%:instance/%aws_functiontest_instanceid%\" ], \"detail\": {   \"changed-tag-keys\": [     \"BillingCode\",     \"an-updated-key\",     \"a-deleted-key\"   ],   \"service\": \"ec2\",   \"resource-type\": \"instance\",   \"version\": 3,   \"tags\": {     \"a-new-key\": \"tag-value-on-new-key-just-added\",     \"an-updated-key\": \"tag-value-was-just-changed\",     \"an-unchanged-key\": \"tag-value-still-the-same\"   } }}" out
 
 rem =========================================================
 rem Remove stack and resources
