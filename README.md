@@ -27,8 +27,8 @@ The following diagram shows the Resources created using the CloudFormation metho
 ## Get Started
 This solution contains two directories with the commands and resources which produce the same results using either the AWS CLI or AWS CloudFormation.
 
-cli - AWS CLI shell commands.
-cfn - AWS CloudFormation template, Lambda function code and CloudFormation CLI commands.
+cli - AWS CLI shell commands.  
+cfn - AWS CloudFormation template, Lambda function code and CloudFormation CLI commands.  
 
 In each method directory open the .txt file to review the commands to create, test and delete the solution resources.
 
@@ -57,10 +57,13 @@ set aws_synctagkeys=[\"Name\", \"BillingCode\", \"Application\", \"Environment\"
 |aws_nameprefix|Resources created by this solution will be prefixed with this string for identification within your environment.|set aws_nameprefix=my-sync-tags-solution|
 |aws_synctagskeys|List of tag keys that the solution should synchronize on child resources. Tag keys not in this list are ignored.|set aws_synctagkeys=[\"CostCenter\",\"App\"]|
  
-Once you ahve set your parameter values based on your environment you can use the remaining commands in the .txt file specific for either the CLI or CloudFormation method to complete the solution deployment.
+Once you have set your parameter values based on your environment you can use the remaining commands in the .txt file specific for either the CLI or CloudFormation method to complete the solution deployment.
 
 ### Requirements
 The commands and scripts in this solution assume you have the AWS CLI 1.x installed (https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html) and configured using named profiles (https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html).
+
+### Costs
+Using this solution will incur AWS service charges. AWS Lambda and AWS CloudWatch Events are charged at a per execution bill rate. Example, the current CloudWatch Events rate is $1.00 per million events in the US East region. AWS Lambda costs are based on number of requests and memory allocated to the function. Example, the current rate is $.20 per million requests and $0.0000166667 per Gigabyte-second. See https://aws.amazon.com/lambda/pricing/ and https://aws.amazon.com/cloudwatch/pricing/ for more pricing information. The monthly costs for this solution will vary based on the number of tag change events that occur in the target account.
 
 #### References
 AWS CloudFormation: <https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/Welcome.html>  
