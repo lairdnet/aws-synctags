@@ -33,6 +33,7 @@ cfn - AWS CloudFormation template, Lambda function code and CloudFormation CLI c
 In each method directory open the .txt file to review the commands to create, test and delete the solution resources.
 
 .\cli\synctags-cli.txt
+
 .\cfn\synctags-cfn-cli.txt
 
 Review the comments and commands starting with the environment variable set commands. These variables define the configurable parameters of the solution.
@@ -56,6 +57,7 @@ set aws_synctagkeys=[\"Name\", \"BillingCode\", \"Application\", \"Environment\"
 |aws_default_region|Set the AWS CLI region, overriding the profile defined region. This is the region that cli commands will default do and where the solution will be deployed. See https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html for more information.|set aws_default_region=us-west-2|
 |aws_nameprefix|Resources created by this solution will be prefixed with this string for identification within your environment.|set aws_nameprefix=my-sync-tags-solution|
 |aws_synctagskeys|List of tag keys that the solution should synchronize on child resources. Tag keys not in this list are ignored.|set aws_synctagkeys=[\"CostCenter\",\"App\"]|
+
 Once you ahve set your parameter values based on your environment you can use the remaining commands in the .txt file specific for either the CLI or CloudFormation method to complete the solution deployment.
 
 ### Requirements
