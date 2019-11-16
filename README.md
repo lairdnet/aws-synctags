@@ -1,4 +1,4 @@
-# aws-sync-tags - Keep dependent resource tags in sync.
+# aws-synctags - Keep dependent resource tags in sync.
 Maintaining tags across dependent resources provides accurate cost allocation reporting and tag based policy enforcement.
 
 Whether its simple typos, revising tag values or adjusting standards, tags get out of sync. Because we never do things manually, this project will create a Lambda function to keep important tags in sync across resources. 
