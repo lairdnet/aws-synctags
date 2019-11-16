@@ -6,7 +6,7 @@ Whether its simple typos, revising tag values or adjusting standards, tags get o
 ## Solution
 This solution will create all the required dependencies for your Lambda function including IAM roles and policies, logs, a Cloudwatch Event Rules to trigger the Lambda function when EC2 resource tags are updated and an SNS topic and subscription so you can receive e-mail notifications on tag updates.
 
-This project also aims to be a functional example of using the AWS CLI or AWS CloudFormation to create and manage the solution. A minimal set of resources, references and nesting are used in order to focus on the fundamentals of creating a solution that leverages a few key services of AWS. The Lambda function also demonstrates the use of the AWS SDK for Python (Boto 3).
+This project also aims to be a functional example of using the AWS CLI, AWS CloudFormation or HashiCorp Terraform to create and manage the solution. A minimal set of resources, references and nesting are used in order to focus on the fundamentals of creating a solution that leverages a few key services of AWS. The Lambda function also demonstrates the use of the AWS SDK for Python (Boto 3).
 
 The following resources will be created as part of this solution.
 
@@ -29,11 +29,13 @@ This solution contains two directories with the commands and resources which pro
 
 cli - AWS CLI shell commands.  
 cfn - AWS CloudFormation template, Lambda function code and CloudFormation CLI commands.  
+tf - HashiCorp Terraform template and CLI commands.  
 
 In each method directory open the .txt file to review the commands to create, test and delete the solution resources.
 
 .\cli\synctags-cli.txt  
-.\cfn\synctags-cfn-cli.txt
+.\cfn\synctags-cfn-cli.txt  
+.\tf\synctags-tf-cli.txt  
 
 Review the comments and commands starting with the environment variable set commands. These variables define the configurable parameters of the solution.
 
@@ -57,12 +59,19 @@ set aws_cfnbucket=%aws_nameprefix%-cfn-bucket
 |aws_default_region|Set the AWS CLI region, overriding the profile defined region. This is the region that cli commands will default do and where the solution will be deployed. See https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html for more information.|set aws_default_region=us-west-2|
 |aws_nameprefix|Resources created by this solution will be prefixed with this string for identification within your environment.|set aws_nameprefix=my-sync-tags-solution|
 |aws_synctagskeys|List of tag keys that the solution should synchronize on child resources. Tag keys not in this list are ignored.|set aws_synctagkeys=[\"CostCenter\",\"App\"]|
-|aws_cfnbucket|For CloudFormation only. Specifies the name of the S3 bucket to create to source the Lambda function code file.|set aws_cfnbucket=1343234-cfn-bucket|  
+|aws_cfnbucket|CloudFormation solution only. Specifies the name of the S3 bucket to create to source the Lambda function code file.|set aws_cfnbucket=1343234-cfn-bucket|  
+|TF_VAR_terraform_cloud_org|Terraform solution only. Specifies the Terraform Cloud oranization ID. See https://www.terraform.io/docs/cloud/index.html|set TF_VAR_terraform_cloud_org=MY-ORG|  
+|TF_VAR_terraform_cloud_workspace|Terraform solution only. Specifies the Terraform Cloud workspace name. See https://www.terraform.io/docs/cloud/getting-started/workspaces.html|set TF_VAR_terraform_cloud_workspace=my-workspace|
 
-Once you have set your parameter values based on your environment you can use the remaining commands in the .txt file specific for either the CLI or CloudFormation method to complete the solution deployment.
+Once you have set your parameter values based on your environment you can use the remaining commands in the .txt file specific for the CLI, CloudFormation or Terraform method to complete the solution deployment.
+
+### Terraform Considerations
+The SNS topic subscription created as part of this solution is not natively supported by Terraform. To workaround this the provided template leverages a local-exec provisioner to execute the AWS CLI commands to create the subscription. The SNS topic subscription is an unmanaged resource in Terraform. Additionally, if you choose to use Terraform Cloud for state management and execution the AWS CLI is not available on the Terraform Cloud worker nodes. Although software can be installed on the worker nodes as part of the local-exec command, enabling sudo is only available in Terraform Cloud Enterprise. Given these conditions the SNS topic subscription will not be created if you configure the Terraform solution to use Terraform Cloud as the remote backend.
 
 ### Requirements
 The commands and scripts in this solution assume you have the AWS CLI 1.x installed (https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html) and configured using named profiles (https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html).
+
+If using the Terraform solution, the commands and scripts assume you have installed HashiCorp Terraform (https://www.terraform.io/downloads.html). If using remote state management with Terraform Cloud you have created a user token and configured your local Terraform CLI config (https://www.terraform.io/docs/cloud/migrate/index.html), created a workspace (https://www.terraform.io/docs/cloud/getting-started/workspaces.html) and configured workspace environment variables AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY.  
 
 ### Costs
 Using this solution will incur AWS service charges. AWS Lambda and AWS CloudWatch Events are charged at a per execution bill rate. Example, the current CloudWatch Events rate is $1.00 per million events in the US East region. AWS Lambda costs are based on number of requests and memory allocated to the function. Example, the current rate is $.20 per million requests and $0.0000166667 per Gigabyte-second. See https://aws.amazon.com/lambda/pricing/ and https://aws.amazon.com/cloudwatch/pricing/ for more pricing information. The monthly costs for this solution will vary based on the number of tag change events that occur in the target account.

@@ -17,13 +17,12 @@ rem =========================================================
 rem Update the following variables to match your environment
 rem =========================================================
 set aws_profile=MY-AWS-PROFILE
-set aws_accountid=000000000000
-set aws_notifyemail=ME@EMAIL.COM
-set aws_functiontest_instanceid=i-00000000000000000
 set aws_default_region=us-east-1
+set aws_accountid=000000000000
 set aws_nameprefix=synctags
 set aws_synctagkeys=[\"Name\", \"BillingCode\", \"Application\", \"Environment\"]
-
+set aws_notifyemail=ME@EMAIL.COM
+set aws_functiontest_instanceid=i-00000000000000000
 
 rem =========================================================
 rem Create function iam role and policy

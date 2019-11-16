@@ -17,29 +17,56 @@ rem =========================================================
 rem Update the following variables to match your environment
 rem =========================================================
 set aws_profile=MY-AWS-PROFILE
-set aws_accountid=000000000000
-set aws_notifyemail=ME@EMAIL.COM
-set aws_functiontest_instanceid=i-00000000000000000
 set aws_default_region=us-east-1
+set aws_accountid=000000000000
 set aws_nameprefix=synctags
 set aws_synctagkeys=[\"Name\", \"BillingCode\", \"Application\", \"Environment\"]
-set aws_cfnbucket=%aws_nameprefix%-cfn-bucket
+set aws_notifyemail=ME@EMAIL.COM
+set aws_functiontest_instanceid=i-00000000000000000
 
 rem =========================================================
-rem Create S3 bucket for deployment package (code)
+rem Terraform configuration variables
+rem =========================================================
+set TF_VAR_aws_profile=%aws_profile%
+set TF_VAR_aws_default_region=%aws_default_region%
+
+rem If using Terraform Cloud for remote state management 
+rem update your org and workspace values, see rem https://app.terraform.io
+set TF_VAR_terraform_cloud_org=MY-ORG
+set TF_VAR_terraform_cloud_workspace=my-workspace
+
+rem =========================================================
+rem Use terraform apply to view plan and apply changes
 rem =========================================================
 
-aws s3api create-bucket --bucket %aws_cfnbucket% --region %aws_default_region%
+rem Determine if terraform cloud is being used and configure environment
+del backend.hcl backend.tf
+if not "%TF_VAR_terraform_cloud_org%" == "MY-ORG" (
 
-rem =========================================================
-rem Use CFN validate/package/deploy model
-rem =========================================================
+    echo organization = "%TF_VAR_terraform_cloud_org%" > backend.hcl
+    echo workspaces { name = "%TF_VAR_terraform_cloud_workspace%" } >> backend.hcl
+    echo terraform { > backend.tf
+    echo   backend "remote" {} >> backend.tf
+    echo } >> backend.tf
 
-aws cloudformation validate-template --template-body file://synctags-cfn.json
-aws cloudformation package --template-file synctags-cfn.json --s3-bucket %aws_cfnbucket% --output-template-file synctags-cfn-packaged.yml
-aws cloudformation deploy --template-file synctags-cfn-packaged.yml --stack-name %aws_nameprefix% --parameter-overrides ResourceNamePrefix=%aws_nameprefix% NotificationEmail=%aws_notifyemail% ResourceSyncTagKeys="%aws_synctagkeys%" --capabilities CAPABILITY_NAMED_IAM
+    set TF_VAR_terraform_backend_remote=true
 
-rem Confirm topic subscription email in order to receive notifications on tag updates
+    terraform init -backend-config=backend.hcl
+
+) else (
+
+    set TF_VAR_terraform_backend_remote=false
+
+    terraform init
+
+)
+
+echo terraform_backend_remote=%TF_VAR_terraform_backend_remote% > synctags.auto.tfvars
+echo resource_name_prefix="%aws_nameprefix%" >> synctags.auto.tfvars
+echo sync_tag_keys="%aws_synctagkeys%" >> synctags.auto.tfvars
+echo notification_email="%aws_notifyemail%" >> synctags.auto.tfvars
+
+terraform apply
 
 rem =========================================================
 rem Call function with test event to test match and no 
@@ -98,6 +125,16 @@ echo } >> nomatchtestevent.tmp
 notepad nomatchtestevent.tmp
 
 rem =========================================================
-rem Remove stack and resources
+rem Remove all resources
 rem =========================================================
-aws cloudformation delete-stack --stack-name %aws_nameprefix%
+
+rem Topic subscription cannot be terraform destroyed so use cli to remove
+aws sns list-subscriptions-by-topic --topic-arn arn:aws:sns:%aws_default_region%:%aws_accountid%:%aws_nameprefix%-topic --no-paginate --output text --query "Subscriptions[]["SubscriptionArn"]" > snstopicsubarn.tmp
+set /p snstopicsubarn=<snstopicsubarn.tmp
+aws sns unsubscribe --subscription-arn %snstopicsubarn%
+
+rem Use terraform to remove all managed resources
+terraform destroy
+
+rem Removing lambda function will not remove log group/stream so use cli to remove
+aws logs delete-log-group --log-group-name /aws/lambda/%aws_nameprefix%-event-handler
