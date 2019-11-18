@@ -14,3 +14,4 @@ cli/synctags.py
 cli/synctags.zip
 tf/synctags.py
 tf/synctags.zip
+cfn/synctags-cfn-packaged.yml
