@@ -25,7 +25,7 @@ The following diagram shows the Resources created using the CloudFormation metho
 
 
 ## Get Started
-This solution contains two directories with the commands and resources which produce the same results using either the AWS CLI or AWS CloudFormation.
+This solution contains three directories with the commands and resources which produce the same results using either the AWS CLI, AWS CloudFormation and HashiCorp Terraform.
 
 cli - AWS CLI shell commands.  
 cfn - AWS CloudFormation template, Lambda function code and CloudFormation CLI commands.  
@@ -48,6 +48,8 @@ set aws_default_region=us-east-1
 set aws_nameprefix=synctags
 set aws_synctagkeys=[\\"Name\\", \\"BillingCode\\", \\"Application\\", \\"Environment\\"]
 set aws_cfnbucket=%aws_nameprefix%-cfn-bucket
+set TF_VAR_terraform_cloud_org=my-tf-cloud-org
+set TF_VAR_terraform_cloud_workspace=my-tf-cloud-workspace
 ```
 
 | Variable  | Description  | Example |
@@ -79,5 +81,6 @@ Using this solution will incur AWS service charges. AWS Lambda and AWS CloudWatc
 #### References
 AWS CloudFormation: <https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/Welcome.html>  
 AWS Command Line Interface: <https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html>  
-AWS SDK for Python (BOTO 3): <https://boto3.amazonaws.com/v1/documentation/api/latest/index.html><br/>
+AWS SDK for Python (BOTO 3): <https://boto3.amazonaws.com/v1/documentation/api/latest/index.html>  
+HashiCorp Terraform: <https://www.terraform.io/docs/index.html>  
 
