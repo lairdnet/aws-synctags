@@ -35,7 +35,7 @@ In each method directory open the *-cli.txt file to review the commands to creat
 
 .\cli\synctags-cli.txt  
 .\cfn\synctags-cfn-cli.txt  
-.\cdk\synctags-cdk-cli.txt
+.\cdk\synctags-cdk-cli.txt  
 .\tf\synctags-tf-cli.txt  
 
 Review the comments and commands starting with the environment variable set commands. These variables define the configurable parameters of the solution.
