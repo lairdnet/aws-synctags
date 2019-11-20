@@ -1,12 +1,12 @@
 # aws-synctags - Keep dependent resource tags in sync.
 Maintaining tags across dependent resources provides accurate cost allocation reporting and tag based policy enforcement.
 
-Whether its simple typos, revising tag values or adjusting standards, tags get out of sync. Because we never do things manually, this project will create a Lambda function to keep important tags in sync across resources. 
+Whether its simple typos, revising tag values or adjusting standards, tags get out of sync. Because we never do things manually, this project will create a Lambda function to keep important tags in sync across resources.  
 
 ## Solution
 This solution will create all the required dependencies for your Lambda function including IAM roles and policies, logs, a Cloudwatch Event Rules to trigger the Lambda function when EC2 resource tags are updated and an SNS topic and subscription so you can receive e-mail notifications on tag updates.
 
-This project also aims to be a functional example of using the AWS CLI, AWS CloudFormation or HashiCorp Terraform to create and manage the solution. A minimal set of resources, references and nesting are used in order to focus on the fundamentals of creating a solution that leverages a few key services of AWS. The Lambda function also demonstrates the use of the AWS SDK for Python (Boto 3).
+This project also aims to be a functional example of using the AWS CLI, AWS CloudFormation, AWS Cloud Development Kit or HashiCorp Terraform to create and manage the solution. A minimal set of resources, references and nesting are used in order to focus on the fundamentals of creating a solution that leverages a few key services of AWS. The Lambda function also demonstrates the use of the AWS SDK for Python (Boto 3).
 
 The following resources will be created as part of this solution.
 
@@ -23,18 +23,19 @@ The following diagram shows the Resources created using the CloudFormation metho
 
 ![CloudFormation Resources](https://lairdnet-assets-public.s3.amazonaws.com/synctags-cfn-resources.jpg "CloudFormation Resources")
 
-
 ## Get Started
-This solution contains three directories with the commands and resources which produce the same results using either the AWS CLI, AWS CloudFormation and HashiCorp Terraform.
+This solution contains four directories with the commands and resources which produce the same results using either the AWS CLI, AWS CloudFormation, AWS Cloud Development Kit (CDK) and HashiCorp Terraform.
 
-cli - AWS CLI shell commands.  
-cfn - AWS CloudFormation template, Lambda function code and CloudFormation CLI commands.  
-tf - HashiCorp Terraform template and CLI commands.  
+cli - AWS CLI  
+cfn - AWS CloudFormation  
+cdk - AWS CDK  
+tf - HashiCorp Terraform  
 
-In each method directory open the .txt file to review the commands to create, test and delete the solution resources.
+In each method directory open the *-cli.txt file to review the commands to create, test and delete the solution resources.
 
 .\cli\synctags-cli.txt  
 .\cfn\synctags-cfn-cli.txt  
+.\cdk\synctags-cdk-cli.txt
 .\tf\synctags-tf-cli.txt  
 
 Review the comments and commands starting with the environment variable set commands. These variables define the configurable parameters of the solution.
@@ -71,7 +72,9 @@ Once you have set your parameter values based on your environment you can use th
 The SNS topic subscription created as part of this solution is not natively supported by Terraform. To workaround this the provided template leverages a local-exec provisioner to execute the AWS CLI commands to create the subscription. The SNS topic subscription is an unmanaged resource in Terraform. Additionally, if you choose to use Terraform Cloud for state management and execution the AWS CLI is not available on the Terraform Cloud worker nodes. Although software can be installed on the worker nodes as part of the local-exec command, enabling sudo is only available in Terraform Cloud Enterprise. Given these conditions the SNS topic subscription will not be created if you configure the Terraform solution to use Terraform Cloud as the remote backend.
 
 ### Requirements
-The commands and scripts in this solution assume you have the AWS CLI 1.x installed (https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html) and configured using named profiles (https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html).
+The commands and scripts in this solution assume you have the AWS CLI 1.x installed (https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html) and configured using named profiles (https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html). 
+
+If using the AWS CDK solution, the commands and scripts assume you have installed Python (https://www.python.org/downloads/).  
 
 If using the Terraform solution, the commands and scripts assume you have installed HashiCorp Terraform (https://www.terraform.io/downloads.html). If using remote state management with Terraform Cloud you have created a user token and configured your local Terraform CLI config (https://www.terraform.io/docs/cloud/migrate/index.html), created a workspace (https://www.terraform.io/docs/cloud/getting-started/workspaces.html) and configured workspace environment variables AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY.  
 
@@ -82,5 +85,6 @@ Using this solution will incur AWS service charges. AWS Lambda and AWS CloudWatc
 AWS CloudFormation: <https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/Welcome.html>  
 AWS Command Line Interface: <https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html>  
 AWS SDK for Python (BOTO 3): <https://boto3.amazonaws.com/v1/documentation/api/latest/index.html>  
+AWS Cloud Development Kit: <https://docs.aws.amazon.com/cdk/latest/guide/home.html>  
+AWS CDK Python Reference: <https://docs.aws.amazon.com/cdk/api/latest/python/index.html>  
 HashiCorp Terraform: <https://www.terraform.io/docs/index.html>  
-
