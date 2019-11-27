@@ -1,14 +1,14 @@
 // provider
-variable "aws_default_region" {
+variable "AWS_DEFAULT_REGION" {
     default = "us-east-1"
 }
-variable "aws_profile" {
+variable "AWS_PROFILE" {
     default = "default"
 }
 
 provider "aws" {
-  region  = var.aws_default_region
-  profile = var.aws_profile
+  region  = var.AWS_DEFAULT_REGION
+  profile = var.AWS_PROFILE
 }
 
 // input variables
@@ -221,7 +221,7 @@ resource "aws_sns_topic_subscription" "sns_topic_subscription" {
 */
 resource "null_resource" "sns_topic_subscription" {
   provisioner "local-exec" {
-    command = var.terraform_backend_remote?"echo Running in Terraform Cloud, awscli is unsupported. SNS topic subscription not created. > ${data.template_file.sns_topic_subscription_log.rendered}":"aws sns subscribe --topic-arn ${aws_sns_topic.sns_topic.arn} --protocol email --notification-endpoint ${var.notification_email} --profile ${var.aws_profile} > ${data.template_file.sns_topic_subscription_log.rendered}"
+    command = var.terraform_backend_remote?"echo Running in Terraform Cloud, awscli is unsupported. SNS topic subscription not created. > ${data.template_file.sns_topic_subscription_log.rendered}":"aws sns subscribe --topic-arn ${aws_sns_topic.sns_topic.arn} --protocol email --notification-endpoint ${var.notification_email} --profile ${var.AWS_PROFILE} > ${data.template_file.sns_topic_subscription_log.rendered}"
   }
 }
 

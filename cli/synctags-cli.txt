@@ -16,8 +16,8 @@ rem =========================================================
 rem =========================================================
 rem Update the following variables to match your environment
 rem =========================================================
-set aws_profile=MY-AWS-PROFILE
-set aws_default_region=us-east-1
+set AWS_PROFILE=MY-AWS-PROFILE
+set AWS_DEFAULT_REGION=us-east-1
 set aws_accountid=000000000000
 set aws_nameprefix=synctags
 set aws_synctagkeys=[\"Name\", \"BillingCode\", \"Application\", \"Environment\"]
@@ -37,7 +37,7 @@ rem notifications
 rem =========================================================
 
 aws sns create-topic --name %aws_nameprefix%-topic --out text --query "TopicArn" 
-aws sns subscribe --topic-arn arn:aws:sns:%aws_default_region%:%aws_accountid%:%aws_nameprefix%-topic --protocol email --notification-endpoint %aws_notifyemail%
+aws sns subscribe --topic-arn arn:aws:sns:%AWS_DEFAULT_REGION%:%aws_accountid%:%aws_nameprefix%-topic --protocol email --notification-endpoint %aws_notifyemail%
 
 rem Confirm topic subscription email in order to receive notifications on tag updates
 
@@ -146,7 +146,7 @@ rem on ec2 tag updates
 rem =========================================================
 
 aws events put-rule --name %aws_nameprefix%-event-rule --event-pattern "{\"source\":[\"aws.tag\"],\"detail-type\":[\"Tag Change on Resource\"],\"detail\":{\"service\":[\"ec2\"],\"resource-type\":[\"instance\"]}}"
-aws events put-targets --rule %aws_nameprefix%-event-rule --targets "Id"="1","Arn"="arn:aws:lambda:%aws_default_region%:%aws_accountid%:function:%aws_nameprefix%-event-handler"
+aws events put-targets --rule %aws_nameprefix%-event-rule --targets "Id"="1","Arn"="arn:aws:lambda:%AWS_DEFAULT_REGION%:%aws_accountid%:function:%aws_nameprefix%-event-handler"
 
 rem =========================================================
 rem Create test events for console testing of Lambda function
@@ -161,8 +161,8 @@ echo "detail-type": "Tag Change on Resource", >> matchtestevent.tmp
 echo "source": "aws.tag", >> matchtestevent.tmp
 echo "account": "%aws_accountid%", >> matchtestevent.tmp
 echo "time": "2018-09-18T20:41:38Z", >> matchtestevent.tmp
-echo "region": "%aws_default_region%", >> matchtestevent.tmp
-echo "resources": ["arn:aws:ec2:%aws_default_region%:%aws_accountid%:instance/%aws_functiontest_instanceid%" ], >> matchtestevent.tmp
+echo "region": "%AWS_DEFAULT_REGION%", >> matchtestevent.tmp
+echo "resources": ["arn:aws:ec2:%AWS_DEFAULT_REGION%:%aws_accountid%:instance/%aws_functiontest_instanceid%" ], >> matchtestevent.tmp
 echo "detail": { >> matchtestevent.tmp
 echo "changed-tag-keys": [ "BillingCode", "an-updated-key", "a-deleted-key" ], >> matchtestevent.tmp
 echo "service": "ec2", >> matchtestevent.tmp
@@ -181,8 +181,8 @@ echo "detail-type": "Tag Change on Resource", >> nomatchtestevent.tmp
 echo "source": "aws.tag", >> nomatchtestevent.tmp
 echo "account": "%aws_accountid%", >> nomatchtestevent.tmp
 echo "time": "2018-09-18T20:41:38Z", >> nomatchtestevent.tmp
-echo "region": "%aws_default_region%", >> nomatchtestevent.tmp
-echo "resources": [   "arn:aws:ec2:%aws_default_region%:%aws_accountid%:instance/%aws_functiontest_instanceid%" ], >> nomatchtestevent.tmp
+echo "region": "%AWS_DEFAULT_REGION%", >> nomatchtestevent.tmp
+echo "resources": [   "arn:aws:ec2:%AWS_DEFAULT_REGION%:%aws_accountid%:instance/%aws_functiontest_instanceid%" ], >> nomatchtestevent.tmp
 echo "detail": { >> nomatchtestevent.tmp
 echo "changed-tag-keys": ["a-new-key", "an-updated-key", "a-deleted-key"   ], >> nomatchtestevent.tmp
 echo "service": "ec2", >> nomatchtestevent.tmp
@@ -201,10 +201,10 @@ aws events remove-targets --rule %aws_nameprefix%-event-rule --ids 1
 aws events delete-rule --name %aws_nameprefix%-event-rule
 aws lambda delete-function --function-name %aws_nameprefix%-event-handler
 aws logs delete-log-group --log-group-name /aws/lambda/%aws_nameprefix%-event-handler
-aws sns list-subscriptions-by-topic --topic-arn arn:aws:sns:%aws_default_region%:%aws_accountid%:%aws_nameprefix%-topic --no-paginate --output text --query "Subscriptions[]["SubscriptionArn"]" > snstopicsubarn.tmp
+aws sns list-subscriptions-by-topic --topic-arn arn:aws:sns:%AWS_DEFAULT_REGION%:%aws_accountid%:%aws_nameprefix%-topic --no-paginate --output text --query "Subscriptions[]["SubscriptionArn"]" > snstopicsubarn.tmp
 set /p snstopicsubarn=<snstopicsubarn.tmp
 aws sns unsubscribe --subscription-arn %snstopicsubarn%
-aws sns delete-topic --topic-arn arn:aws:sns:%aws_default_region%:%aws_accountid%:%aws_nameprefix%-topic
+aws sns delete-topic --topic-arn arn:aws:sns:%AWS_DEFAULT_REGION%:%aws_accountid%:%aws_nameprefix%-topic
 aws iam delete-role-policy --role-name %aws_nameprefix%-role --policy-name %aws_nameprefix%-policy
 aws iam delete-role --role-name %aws_nameprefix%-role
 
